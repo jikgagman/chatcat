@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Chat</title>
+    {% load static %}
+    <style>
+        .chat-container {
+            position: relative;
+            width: 100%;
+            height: 80vh;
+            background: url("{% static '/images/background.jpg' %}") no-repeat center center;
+            background-size: cover;
+        }
+        .character {
+            position: absolute;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100px; /* Adjust the width */
+        }
+        .character img {
+            width: 100%; /* Ensure the image scales with the container */
+        }
+        .speech-bubble {
+            background: #fff;
+            border-radius: 5px;
+            padding: 10px;
+            margin-bottom: 10px;
+            position: relative;
+            max-width: 200px;
+        }
+        .speech-bubble::after {
+            content: '';
+            position: absolute;
+            bottom: -10px;
+            left: 20px;
+            border-width: 10px;
+            border-style: solid;
+            border-color: #fff transparent transparent transparent;
+        }
+        .remove-button {
+            display: none;
+            margin-top: 5px;
+            padding: 5px 10px;
+            background: #ff0000;
+            color: #fff;
+            border: none;
+            cursor: pointer;
+        }
+        .character.admin .remove-button {
+            display: block;
+        }
+    </style>
+    <script>
+        const chatSocket = new WebSocket(
+            'ws://' + window.location.host + '/ws/chat/'
+        );
+
+        chatSocket.onmessage = function(e) {
+            const data = JSON.parse(e.data);
+            const messageList = document.getElementById('messageList');
+            let characterElement = document.getElementById('user-' + data.user_id);
+
+            if (characterElement) {
+                // Remove the existing character element
+                characterElement.remove();
+            }
+
+            // Create a new character element
+            characterElement = document.createElement('div');
+            characterElement.id = 'user-' + data.user_id;
+            characterElement.classList.add('character');
+            characterElement.style.left = data.x_position + 'px';
+            characterElement.style.top = data.y_position + 'px';
+            characterElement.innerHTML = `<div class="speech-bubble">${data.user}: ${data.message}</div><img src="{% static 'images/kitty.png' %}" alt="Character">
+                                          {% if user.is_superuser %}<button class="remove-button" onclick="removeCharacter(${data.user_id})">Remove</button>{% endif %}`;
+            messageList.appendChild(characterElement);
+        };
+
+        function sendMessage() {
+            const messageInput = document.getElementById('messageInput');
+            const message = messageInput.value;
+
+            fetch('/send_message/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: JSON.stringify({
+                    'message': message
+                })
+            }).then(response => response.json())
+            .then(data => {
+                if (data.message) {
+                    const messageList = document.getElementById('messageList');
+                    let characterElement = document.getElementById('user-{{ user.id }}');
+
+                    if (characterElement) {
+                        // Remove the existing character element
+                        characterElement.remove();
+                    }
+
+                    // Create a new character element
+                    characterElement = document.createElement('div');
+                    characterElement.id = 'user-{{ user.id }}';
+                    characterElement.classList.add('character');
+                    characterElement.style.left = data.x_position + 'px';
+                    characterElement.style.top = data.y_position + 'px';
+                    characterElement.innerHTML = `<div class="speech-bubble">{{ user.nickname }}: ${message}</div><img src="{% static 'images/kitty.png' %}" alt="Character">
+                                                  {% if user.is_superuser %}<button class="remove-button" onclick="removeCharacter({{ user.id }})">Remove</button>{% endif %}`;
+                    messageList.appendChild(characterElement);
+
+                    messageInput.value = '';
+                }
+            });
+        }
+
+        function removeCharacter(userId) {
+            fetch(`/remove_character/${userId}/`, {
+                method: 'GET',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}'
+                }
+            }).then(response => {
+                if (response.ok) {
+                    const characterElement = document.getElementById('user-' + userId);
+                    if (characterElement) {
+                        characterElement.remove();
+                    }
+                }
+            });
+        }
+    </script>
+</head>
+<body>
+    <h1>Chat</h1>
+    <div id="messageList" class="chat-container">
+        {% for message in messages %}
+            <div class="character {% if user.is_superuser %}admin{% endif %}" id="user-{{ message.user.id }}" style="left: {{ message.x_position }}px; top: {{ message.y_position }}px;">
+                <div class="speech-bubble">{{ message.user.nickname }}: {{ message.message }}</div>
+                <img src="{% static 'images/kitty.png' %}" alt="Character">
+                {% if user.is_superuser %}
+                    <button class="remove-button" onclick="removeCharacter({{ message.user.id }})">Remove</button>
+                {% endif %}
+            </div>
+        {% endfor %}
+    </div>
+    <input type="text" id="messageInput">
+    <button onclick="sendMessage()">Send</button>
+</body>
+</html>
