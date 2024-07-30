@@ -8,7 +8,7 @@
             position: relative;
             width: 100%;
             height: 80vh;
-            background: url("{% static '/images/background.jpg' %}") no-repeat center center;
+            background: url("{% static 'images/background.jpg' %}") no-repeat center center;
             background-size: cover;
         }
         .character {
@@ -51,6 +51,23 @@
             display: block;
         }
     </style>
+</head>
+<body>
+    <h1>Chat</h1>
+    <div id="messageList" class="chat-container">
+        {% for message in messages %}
+            <div class="character {% if user.is_superuser %}admin{% endif %}" id="user-{{ message.user.id }}" style="left: {{ message.x_position }}px; top: {{ message.y_position }}px;">
+                <div class="speech-bubble">{{ message.user.nickname }}: {{ message.message }}</div>
+                <img src="{% static 'images/kitty.png' %}" alt="Character">
+                {% if user.is_superuser %}
+                    <button class="remove-button" onclick="removeCharacter({{ message.user.id }})">Remove</button>
+                {% endif %}
+            </div>
+        {% endfor %}
+    </div>
+    <input type="text" id="messageInput">
+    <button onclick="sendMessage()">Send</button>
+
     <script>
         const chatSocket = new WebSocket(
             'ws://' + window.location.host + '/ws/chat/'
@@ -132,21 +149,5 @@
             });
         }
     </script>
-</head>
-<body>
-    <h1>Chat</h1>
-    <div id="messageList" class="chat-container">
-        {% for message in messages %}
-            <div class="character {% if user.is_superuser %}admin{% endif %}" id="user-{{ message.user.id }}" style="left: {{ message.x_position }}px; top: {{ message.y_position }}px;">
-                <div class="speech-bubble">{{ message.user.nickname }}: {{ message.message }}</div>
-                <img src="{% static 'images/kitty.png' %}" alt="Character">
-                {% if user.is_superuser %}
-                    <button class="remove-button" onclick="removeCharacter({{ message.user.id }})">Remove</button>
-                {% endif %}
-            </div>
-        {% endfor %}
-    </div>
-    <input type="text" id="messageInput">
-    <button onclick="sendMessage()">Send</button>
 </body>
 </html>

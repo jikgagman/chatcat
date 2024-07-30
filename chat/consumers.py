@@ -1,18 +1,21 @@
-# chat/consumers.py
 import json
 from channels.generic.websocket import AsyncWebsocketConsumer
 
+
 class ChatConsumer(AsyncWebsocketConsumer):
     async def connect(self):
+        self.room_group_name = 'chat_group'
+
         await self.channel_layer.group_add(
-            "chat_group",
+            self.room_group_name,
             self.channel_name
         )
+
         await self.accept()
 
     async def disconnect(self, close_code):
         await self.channel_layer.group_discard(
-            "chat_group",
+            self.room_group_name,
             self.channel_name
         )
 
@@ -21,7 +24,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
         message = text_data_json['message']
 
         await self.channel_layer.group_send(
-            "chat_group",
+            self.room_group_name,
             {
                 'type': 'chat_message',
                 'message': message
