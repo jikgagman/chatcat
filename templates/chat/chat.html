@@ -2,10 +2,6 @@
 <html>
 <head>
     <title>Chat</title>
-    <meta property="og:title" content="chatcat">
-    <meta property="og:type" content="website">
-    <meta property="og:image" content="static/cat.png">
-    <meta property="og:description" content="고양이">
     {% load static %}
     <style>
         .chat-container {
@@ -76,7 +72,7 @@
             characterElement.classList.add('character');
             characterElement.style.left = data.x_position + 'px';
             characterElement.style.top = data.y_position + 'px';
-            characterElement.innerHTML = `<div class="speech-bubble">${data.user}: ${data.message}</div><img src="{% static 'images/kitty.png' %}" alt="Character">
+            characterElement.innerHTML = `<div class="speech-bubble">${data.nickname}: ${data.message}</div><img src="{% static 'images/kitty.png' %}" alt="Character">
                                           {% if user.is_superuser %}<button class="remove-button" onclick="removeCharacter(${data.user_id})">Remove</button>{% endif %}`;
             messageList.appendChild(characterElement);
         };
@@ -84,40 +80,16 @@
         function sendMessage() {
             const messageInput = document.getElementById('messageInput');
             const message = messageInput.value;
+            const x_position = 100;  // Example position, you might want to get the actual position dynamically
+            const y_position = 100;  // Example position, you might want to get the actual position dynamically
 
-            fetch('/send_message/', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': '{{ csrf_token }}'
-                },
-                body: JSON.stringify({
-                    'message': message
-                })
-            }).then(response => response.json())
-            .then(data => {
-                if (data.message) {
-                    const messageList = document.getElementById('messageList');
-                    let characterElement = document.getElementById('user-{{ user.id }}');
+            chatSocket.send(JSON.stringify({
+                'message': message,
+                'x_position': x_position,
+                'y_position': y_position,
+            }));
 
-                    if (characterElement) {
-                        // Remove the existing character element
-                        characterElement.remove();
-                    }
-
-                    // Create a new character element
-                    characterElement = document.createElement('div');
-                    characterElement.id = 'user-{{ user.id }}';
-                    characterElement.classList.add('character');
-                    characterElement.style.left = data.x_position + 'px';
-                    characterElement.style.top = data.y_position + 'px';
-                    characterElement.innerHTML = `<div class="speech-bubble">{{ user.nickname }}: ${message}</div><img src="{% static 'images/kitty.png' %}" alt="Character">
-                                                  {% if user.is_superuser %}<button class="remove-button" onclick="removeCharacter({{ user.id }})">Remove</button>{% endif %}`;
-                    messageList.appendChild(characterElement);
-
-                    messageInput.value = '';
-                }
-            });
+            messageInput.value = '';
         }
 
         function removeCharacter(userId) {
