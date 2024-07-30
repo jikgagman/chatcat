@@ -131,7 +131,7 @@ STATICFILES_DIRS = [BASE_DIR / "static"]
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-ASGI_APPLICATION = 'djangoProject.asgi.application'
+ASGI_APPLICATION = 'chatcat.asgi.application'
 
 CHANNEL_LAYERS = {
     'default': {
